@@ -1,11 +1,28 @@
 import { FormEvent, useEffect, useRef, useState } from 'react'
-import { loadTasks, saveTasks, Task } from './taskStorage'
+import {
+  loadTasks,
+  saveTasks,
+  Task,
+  TaskStatus,
+  taskStatuses,
+} from './taskStorage'
+
+type StatusFilter = '全部' | TaskStatus
 
 export default function App() {
   const [title, setTitle] = useState('')
   const [tasks, setTasks] = useState<Task[]>(loadTasks)
   const [error, setError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('全部')
   const nextTaskId = useRef(Math.max(0, ...tasks.map((task) => task.id)) + 1)
+
+  const normalizedQuery = searchQuery.toLocaleLowerCase()
+  const filteredTasks = tasks.filter(
+    (task) =>
+      task.title.toLocaleLowerCase().includes(normalizedQuery) &&
+      (statusFilter === '全部' || task.status === statusFilter),
+  )
 
   useEffect(() => {
     saveTasks(tasks)
@@ -23,11 +40,19 @@ export default function App() {
 
     setTasks((currentTasks) => [
       ...currentTasks,
-      { id: nextTaskId.current, title: trimmedTitle },
+      { id: nextTaskId.current, title: trimmedTitle, status: '待處理' },
     ])
     nextTaskId.current += 1
     setTitle('')
     setError('')
+  }
+
+  function updateTaskStatus(taskId: number, status: TaskStatus) {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === taskId ? { ...task, status } : task,
+      ),
+    )
   }
 
   return (
@@ -57,12 +82,60 @@ export default function App() {
         )}
       </form>
 
+      <section className="list-controls" aria-label="任務清單篩選">
+        <div>
+          <label htmlFor="task-search">搜尋標題</label>
+          <input
+            id="task-search"
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="status-filter">狀態篩選</label>
+          <select
+            id="status-filter"
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as StatusFilter)
+            }
+          >
+            <option value="全部">全部</option>
+            {taskStatuses.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
+
       {tasks.length === 0 ? (
         <p>目前沒有任務</p>
+      ) : filteredTasks.length === 0 ? (
+        <p>找不到符合條件的任務</p>
       ) : (
         <ul aria-label="任務清單">
-          {tasks.map((task) => (
-            <li key={task.id}>{task.title}</li>
+          {filteredTasks.map((task) => (
+            <li key={task.id}>
+              <span>{task.title}</span>
+              <label>
+                <span className="visually-hidden">任務「{task.title}」狀態</span>
+                <select
+                  value={task.status}
+                  onChange={(event) =>
+                    updateTaskStatus(task.id, event.target.value as TaskStatus)
+                  }
+                >
+                  {taskStatuses.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </li>
           ))}
         </ul>
       )}
