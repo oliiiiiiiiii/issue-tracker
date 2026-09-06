@@ -20,6 +20,14 @@ npm run dev
 npm test
 ```
 
+## 提交前完整檢查
+
+```bash
+npm run check
+```
+
+此指令會依序執行完整測試與正式建置；正式建置包含 TypeScript Type Check。目前專案尚未設定 lint，因此此檢查不包含 lint。
+
 ## 建置正式版本
 
 ```bash
