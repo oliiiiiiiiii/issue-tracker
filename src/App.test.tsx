@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 const storedItems = new Map<string, string>()
@@ -32,7 +32,10 @@ beforeEach(() => {
   window.localStorage.clear()
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 function storeTasks(tasks: unknown[]) {
   window.localStorage.setItem('issue-tracker-tasks', JSON.stringify(tasks))
@@ -195,6 +198,65 @@ describe('App', () => {
     expect(
       screen.getByRole('combobox', { name: '任務「修正錯誤」狀態' }),
     ).toHaveValue('進行中')
+  })
+
+  it('確認後刪除任務並同步保存到 localStorage', () => {
+    storeTasks([
+      { id: 1, title: '保留任務', status: '待處理' },
+      { id: 2, title: '刪除任務', status: '進行中' },
+    ])
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<App />)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '刪除任務「刪除任務」' }),
+    )
+
+    expect(confirmSpy).toHaveBeenCalledWith('確定要刪除任務「刪除任務」嗎？')
+    expect(screen.queryByText('刪除任務')).not.toBeInTheDocument()
+    expect(screen.getByText('保留任務')).toBeInTheDocument()
+    expect(
+      JSON.parse(window.localStorage.getItem('issue-tracker-tasks') ?? ''),
+    ).toEqual([{ id: 1, title: '保留任務', status: '待處理' }])
+  })
+
+  it('取消確認時不刪除任務或改變資料', () => {
+    const tasks = [{ id: 1, title: '不可誤刪', status: '待處理' }]
+    storeTasks(tasks)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<App />)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '刪除任務「不可誤刪」' }),
+    )
+
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    expect(screen.getByText('不可誤刪')).toBeInTheDocument()
+    expect(
+      JSON.parse(window.localStorage.getItem('issue-tracker-tasks') ?? ''),
+    ).toEqual(tasks)
+  })
+
+  it('在搜尋和狀態篩選中刪除最後一筆符合任務後顯示篩選空狀態', () => {
+    storeTasks([
+      { id: 1, title: '修正登入錯誤', status: '待處理' },
+      { id: 2, title: '撰寫文件', status: '已完成' },
+    ])
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<App />)
+
+    fireEvent.change(screen.getByRole('searchbox', { name: '搜尋標題' }), {
+      target: { value: '登入' },
+    })
+    fireEvent.change(screen.getByRole('combobox', { name: '狀態篩選' }), {
+      target: { value: '待處理' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: '刪除任務「修正登入錯誤」' }),
+    )
+
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    expect(screen.getByText('找不到符合條件的任務')).toBeInTheDocument()
   })
 
   it('將沒有狀態的舊 localStorage 任務視為待處理並保持可用', () => {
