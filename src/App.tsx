@@ -55,6 +55,16 @@ export default function App() {
     )
   }
 
+  function deleteTask(task: Task) {
+    if (!window.confirm(`確定要刪除任務「${task.title}」嗎？`)) {
+      return
+    }
+
+    setTasks((currentTasks) =>
+      currentTasks.filter((currentTask) => currentTask.id !== task.id),
+    )
+  }
+
   return (
     <main>
       <h1>Issue Tracker</h1>
@@ -120,21 +130,31 @@ export default function App() {
           {filteredTasks.map((task) => (
             <li key={task.id}>
               <span>{task.title}</span>
-              <label>
-                <span className="visually-hidden">任務「{task.title}」狀態</span>
-                <select
-                  value={task.status}
-                  onChange={(event) =>
-                    updateTaskStatus(task.id, event.target.value as TaskStatus)
-                  }
+              <div className="task-actions">
+                <label>
+                  <span className="visually-hidden">任務「{task.title}」狀態</span>
+                  <select
+                    value={task.status}
+                    onChange={(event) =>
+                      updateTaskStatus(task.id, event.target.value as TaskStatus)
+                    }
+                  >
+                    {taskStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="delete-button"
+                  type="button"
+                  onClick={() => deleteTask(task)}
+                  aria-label={`刪除任務「${task.title}」`}
                 >
-                  {taskStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  刪除
+                </button>
+              </div>
             </li>
           ))}
         </ul>

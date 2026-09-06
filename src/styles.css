@@ -73,6 +73,20 @@ li {
   margin-bottom: 0.5rem;
 }
 
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-actions label {
+  margin-bottom: 0;
+}
+
+.delete-button {
+  background: #b91c1c;
+}
+
 .list-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
